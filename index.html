@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>wallflower.untitled</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* =====================
+   DESIGN TOKENS
+   ===================== */
+:root {
+  --bg:       #FDFCF8;
+  --surface:  #F5F1EA;
+  --surface2: #EDE8DF;
+  --text:     #1A1814;
+  --muted:    #7A7468;
+  --accent:   #4D7E70;
+  --accent-d: #3A6358;
+  --border:   #DED9D0;
+  --serif:    'Cormorant Garamond', Georgia, serif;
+  --sans:     'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-padding-top: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+/* =====================
+   HEADER
+   ===================== */
+header {
+  text-align: center;
+  padding: 64px 24px 40px;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.logo-dot { color: var(--accent); }
+.tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+  color: var(--muted);
+  margin-top: 12px;
+  letter-spacing: 0.18em;
+}
+
+/* =====================
+   GALLERY
+   ===================== */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 48px 20px 120px; }
+.gallery { columns: 2; column-gap: 14px; }
+@media (min-width: 860px) { .gallery { columns: 3; } }
+@media (max-width: 480px)  { .gallery { columns: 1; } }
+
+.p-card {
+  break-inside: avoid;
+  margin-bottom: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(26,24,20,0.06);
+  transition: box-shadow 0.3s;
+}
+.p-card:hover { box-shadow: 0 4px 16px rgba(26,24,20,0.12); }
+.p-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.5s ease;
+}
+.p-card:hover img { transform: scale(1.03); }
+.p-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(26,24,20,0.72) 0%, transparent 55%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px 14px 14px;
+}
+.p-card:hover .p-overlay { opacity: 1; }
+.p-title {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #F5F1EA;
+  line-height: 1.2;
+}
+.p-count { font-size: 0.68rem; color: rgba(245,241,234,0.65); margin-top: 3px; letter-spacing: 0.08em; }
+
+.empty {
+  column-span: all;
+  text-align: center;
+  padding: 80px 0;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+/* =====================
+   MODAL
+   ===================== */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,24,20,0.65);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg);
+  width: 100%;
+  max-width: 880px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  box-shadow: 0 24px 80px rgba(26,24,20,0.24);
+}
+@media (max-width: 640px) { .modal { grid-template-columns: 1fr; max-height: 95vh; } }
+
+.modal-imgs {
+  background: var(--surface);
+  aspect-ratio: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 640px) { .modal-imgs { aspect-ratio: 4/3; } }
+.modal-imgs img { width: 100%; height: 100%; object-fit: contain; }
+
+.cbtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(253,252,248,0.8);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px; height: 34px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.cbtn:hover { background: var(--bg); }
+.cbtn:disabled { opacity: 0.25; cursor: default; }
+.cbtn.prev { left: 8px; }
+.cbtn.next { right: 8px; }
+
+.cdots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+}
+.cdot { width: 5px; height: 5px; border-radius: 50%; background: rgba(26,24,20,0.25); transition: background 0.2s; }
+.cdot.on { background: var(--accent); }
+
+.modal-info { padding: 32px 28px; display: flex; flex-direction: column; min-height: 280px; }
+.modal-title { font-family: var(--serif); font-size: 1.55rem; font-weight: 400; color: var(--text); line-height: 1.25; }
+.modal-desc { font-size: 0.86rem; line-height: 1.75; color: var(--muted); margin-top: 14px; flex: 1; }
+.modal-cta { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
+.modal-cta p { font-size: 0.75rem; color: var(--muted); margin-bottom: 5px; letter-spacing: 0.04em; }
+.modal-cta a {
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--accent);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.modal-cta a:hover { color: var(--accent-d); }
+
+.mclose {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.mclose:hover { color: var(--text); }
+
+/* =====================
+   ADMIN LOGIN MODAL
+   ===================== */
+.login-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,24,20,0.55);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+.login-bg.open { display: flex; }
+.login-box {
+  background: var(--bg);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 16px 48px rgba(26,24,20,0.18);
+}
+.login-title {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: var(--text);
+  margin-bottom: 22px;
+}
+.login-err { font-size: 0.78rem; color: #9A3A3A; margin-top: 8px; min-height: 18px; }
+
+/* =====================
+   ADMIN FAB
+   ===================== */
+.fab {
+  position: fixed;
+  bottom: 26px;
+  right: 24px;
+  width: 42px; height: 42px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(26,24,20,0.2);
+  transition: background 0.2s;
+}
+.fab:hover { background: var(--accent-d); }
+.fab.hidden { display: none; }
+
+/* =====================
+   ADMIN PANEL
+   ===================== */
+.admin-panel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 200;
+  overflow-y: auto;
+  padding: 28px 20px 40px;
+}
+.admin-panel.open { display: block; }
+.admin-inner { max-width: 600px; margin: 0 auto; }
+
+.admin-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-hd-title { font-family: var(--serif); font-size: 1.35rem; font-weight: 300; color: var(--text); }
+
+/* BUTTONS */
+.btn {
+  padding: 9px 18px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  border: none;
+  font-family: var(--sans);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-p { background: var(--accent); color: #fff; }
+.btn-p:hover { background: var(--accent-d); }
+.btn-s { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-s:hover { border-color: var(--muted); }
+.btn-d { background: transparent; color: #9A3A3A; border: 1px solid #DDC8C8; font-size: 0.72rem; padding: 5px 12px; }
+.btn-d:hover { border-color: #9A3A3A; }
+
+/* FORM */
+.form-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 22px;
+  margin-bottom: 16px;
+}
+.form-box.hidden { display: none; }
+.fg { margin-bottom: 14px; }
+.fl { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.fi, .ft {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 12px;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  font-weight: 300;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.fi:focus, .ft:focus { border-color: var(--accent); }
+.ft { resize: vertical; min-height: 72px; }
+
+.upload-zone {
+  border: 1px dashed var(--border);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg);
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--surface); }
+.upload-zone input { display: none; }
+.upload-zone p { font-size: 0.78rem; color: var(--muted); }
+.upload-zone p span { color: var(--accent); }
+.thumbs { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.thumb { width: 60px; height: 60px; object-fit: cover; border: 1px solid var(--border); background: var(--surface); }
+
+.msg { font-size: 0.78rem; padding: 7px 10px; margin-top: 10px; }
+.msg.ok  { background: #EBF5F0; color: #2E6A55; }
+.msg.err { background: #F5EBEB; color: #7A2E2E; }
+.msg.loading { color: var(--muted); }
+
+/* PAINTING LIST IN ADMIN */
+.p-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.p-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.p-item-name { font-family: var(--serif); font-size: 1.05rem; color: var(--text); }
+.p-item-sub { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+.p-item-btns { display: flex; gap: 7px; flex-shrink: 0; margin-left: 12px; }
+
+.row { display: flex; gap: 9px; margin-top: 14px; }
+
+/* LOADING SPINNER */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.loading-screen.hidden { display: none; }
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* PROGRESS BAR */
+.progress-wrap { margin-top: 10px; }
+.progress-bar {
+  height: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.2s;
+}
+.progress-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div class="loading-screen" id="loading-screen">
+  <div class="spinner"></div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">wallflower<span class="logo-dot">.</span>untitled</div>
+  <div class="tagline">come as you are</div>
+</header>
+
+<!-- Gallery -->
+<div class="wrap">
+  <div class="gallery" id="gallery">
+    <div class="empty" id="empty" style="display:none">nothing here yet</div>
+  </div>
+</div>
+
+<!-- Painting Modal -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-imgs">
+      <img id="modal-img" src="" alt="">
+      <button class="cbtn prev" id="cprev">&#8592;</button>
+      <button class="cbtn next" id="cnext">&#8594;</button>
+      <div class="cdots" id="cdots"></div>
+    </div>
+    <div class="modal-info">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-desc"  id="modal-desc"></div>
+      <div class="modal-cta">
+        <p>interested in this piece?</p>
+        <a href="https://www.instagram.com/wallflower.untitled?stkn=ejl5aW9uOG1ob3Ro"
+           target="_blank" rel="noopener">dm @wallflower.untitled</a>
+      </div>
+    </div>
+    <button class="mclose" id="mclose">✕</button>
+  </div>
+</div>
+
+<!-- Admin Login Modal -->
+<div class="login-bg" id="login-bg">
+  <div class="login-box">
+    <div class="login-title">admin access</div>
+    <div class="fg">
+      <label class="fl">password</label>
+      <input class="fi" id="pwd-input" type="password" placeholder="enter password">
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn btn-p" id="login-btn">enter</button>
+      <button class="btn btn-s" id="login-cancel">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin FAB (pencil button — tap to manage) -->
+<button class="fab hidden" id="fab" title="manage paintings">✏</button>
+
+<!-- Admin Panel -->
+<div class="admin-panel" id="admin-panel">
+  <div class="admin-inner">
+    <div class="admin-hd">
+      <div class="admin-hd-title">manage paintings</div>
+      <div class="row" style="margin-top:0">
+        <button class="btn btn-s" id="logout-btn" style="font-size:0.72rem;padding:6px 12px;color:var(--muted)">log out</button>
+        <button class="btn btn-s" id="aclose">close</button>
+      </div>
+    </div>
+
+    <button class="btn btn-p" id="add-btn">+ add painting</button>
+
+    <!-- New painting form -->
+    <div class="form-box hidden" id="new-form" style="margin-top:16px">
+      <div class="fg">
+        <label class="fl">title</label>
+        <input class="fi" id="n-title" type="text" placeholder="untitled">
+      </div>
+      <div class="fg">
+        <label class="fl">description</label>
+        <textarea class="ft" id="n-desc" placeholder="say something about this piece..."></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl">images (select multiple for carousel)</label>
+        <div class="upload-zone" id="n-zone">
+          <input type="file" id="n-files" accept="image/*" multiple>
+          <p>click to upload images <span>or drag & drop</span></p>
+          <div class="thumbs" id="n-thumbs"></div>
+        </div>
+      </div>
+      <div id="n-progress" style="display:none">
+        <div class="progress-bar"><div class="progress-fill" id="n-progress-fill"></div></div>
+        <div class="progress-label" id="n-progress-label">uploading...</div>
+      </div>
+      <div id="n-msg"></div>
+      <div class="row">
+        <button class="btn btn-p" id="n-save">save painting</button>
+        <button class="btn btn-s" id="n-cancel">cancel</button>
+      </div>
+    </div>
+
+    <!-- Edit form -->
+    <div class="form-box hidden" id="edit-form" style="margin-top:16px">
+      <div class="fg">
+        <label class="fl">title</label>
+        <input class="fi" id="e-title" type="text">
+      </div>
+      <div class="fg">
+        <label class="fl">description</label>
+        <textarea class="ft" id="e-desc"></textarea>
+      </div>
+      <div class="fg" id="e-existing-wrap">
+        <label class="fl">current images</label>
+        <div class="thumbs" id="e-existing"></div>
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--muted)">adding new images will append to existing ones</div>
+      </div>
+      <div class="fg">
+        <label class="fl">add more images</label>
+        <div class="upload-zone" id="e-zone">
+          <input type="file" id="e-files" accept="image/*" multiple>
+          <p>click to add more <span>or drag & drop</span></p>
+          <div class="thumbs" id="e-thumbs"></div>
+        </div>
+      </div>
+      <div id="e-progress" style="display:none">
+        <div class="progress-bar"><div class="progress-fill" id="e-progress-fill"></div></div>
+        <div class="progress-label" id="e-progress-label">uploading...</div>
+      </div>
+      <div id="e-msg"></div>
+      <div class="row">
+        <button class="btn btn-p" id="e-save">save changes</button>
+        <button class="btn btn-s" id="e-cancel">cancel</button>
+      </div>
+    </div>
+
+    <div class="p-list" id="p-list"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================
+   CONFIGURATION — FILL THESE IN BEFORE USE
+   =========================================
+
+   Step 1: Go to console.firebase.google.com
+   Step 2: Create a new project
+   Step 3: Go to Project Settings > General > Your Apps > Add Web App
+   Step 4: Copy the firebaseConfig values below
+   Step 5: In Firebase console:
+           - Go to Firestore Database → Create database → Start in test mode
+           - Go to Storage → Get started → Start in test mode
+   Step 6: Set ADMIN_PASSWORD to whatever you want
+   Step 7: Deploy this file to Netlify (drag & drop at netlify.com)
+
+   ========================================= */
+
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+const ADMIN_PASSWORD = "changethis123";   // ← set your password here
+
+/* =========================================
+   APP CODE — no need to touch below this
+   ========================================= */
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db      = firebase.firestore();
+const storage = firebase.storage();
+
+let paintings   = [];
+let cur         = null;
+let curIdx      = 0;
+let isAdmin     = false;
+let editId      = null;
+let newFiles    = [];
+let editFiles   = [];
+
+/* ---- Auth ---- */
+function checkAdminSession() {
+  return sessionStorage.getItem('wf_admin') === '1';
+}
+function setAdminSession() {
+  sessionStorage.setItem('wf_admin', '1');
+}
+function clearAdminSession() {
+  sessionStorage.removeItem('wf_admin');
+}
+
+/* ---- Init ---- */
+function init() {
+  isAdmin = checkAdminSession();
+  if (isAdmin) showAdminFab();
+
+  db.collection('paintings')
+    .orderBy('order', 'asc')
+    .onSnapshot(
+      snap => {
+        paintings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderGallery();
+        if (document.getElementById('admin-panel').classList.contains('open')) renderList();
+        document.getElementById('loading-screen').classList.add('hidden');
+      },
+      err => {
+        console.warn('Firestore error:', err);
+        document.getElementById('loading-screen').classList.add('hidden');
+        renderGallery();
+      }
+    );
+}
+
+/* ---- Gallery ---- */
+function renderGallery() {
+  const g = document.getElementById('gallery');
+  g.querySelectorAll('.p-card').forEach(c => c.remove());
+  const empty = document.getElementById('empty');
+  if (!paintings.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  paintings.forEach(p => {
+    const c = document.createElement('div');
+    c.className = 'p-card';
+    c.onclick = () => openModal(p.id);
+    const first = p.imageUrls?.[0] || '';
+    const n = p.imageUrls?.length || 0;
+    c.innerHTML = `
+      <img src="${first}" alt="${esc(p.title || '')}" loading="lazy">
+      <div class="p-overlay">
+        <div class="p-title">${esc(p.title || 'untitled')}</div>
+        ${n > 1 ? `<div class="p-count">${n} images</div>` : ''}
+      </div>`;
+    g.appendChild(c);
+  });
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ---- Modal ---- */
+function openModal(id) {
+  cur = paintings.find(p => p.id === id);
+  if (!cur) return;
+  curIdx = 0;
+  document.getElementById('modal-title').textContent = cur.title || 'untitled';
+  document.getElementById('modal-desc').textContent  = cur.description || '';
+  updateCarousel();
+  document.getElementById('modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateCarousel() {
+  const urls = cur?.imageUrls || [];
+  document.getElementById('modal-img').src = urls[curIdx] || '';
+  const prev = document.getElementById('cprev');
+  const next = document.getElementById('cnext');
+  prev.disabled = curIdx === 0;
+  next.disabled  = curIdx >= urls.length - 1;
+  const show = urls.length > 1;
+  prev.style.display = show ? 'flex' : 'none';
+  next.style.display = show ? 'flex' : 'none';
+  document.getElementById('cdots').innerHTML = show
+    ? urls.map((_, i) => `<div class="cdot${i === curIdx ? ' on' : ''}"></div>`).join('')
+    : '';
+}
+
+document.getElementById('cprev').onclick = () => { if (curIdx > 0) { curIdx--; updateCarousel(); } };
+document.getElementById('cnext').onclick = () => {
+  if (cur && curIdx < cur.imageUrls.length - 1) { curIdx++; updateCarousel(); }
+};
+document.getElementById('mclose').onclick = closeModal;
+document.getElementById('modal-bg').onclick = e => { if (e.target === e.currentTarget) closeModal(); };
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+  cur = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('modal-bg').classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'ArrowLeft' && curIdx > 0) { curIdx--; updateCarousel(); }
+  if (e.key === 'ArrowRight' && cur && curIdx < cur.imageUrls.length - 1) { curIdx++; updateCarousel(); }
+});
+
+/* ---- Admin Login ---- */
+document.getElementById('fab').onclick = () => {
+  if (isAdmin) { openAdminPanel(); return; }
+  document.getElementById('login-bg').classList.add('open');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 50);
+};
+
+document.getElementById('login-btn').onclick = attemptLogin;
+document.getElementById('login-cancel').onclick = () => {
+  document.getElementById('login-bg').classList.remove('open');
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('login-err').textContent = '';
+};
+
+document.getElementById('pwd-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') attemptLogin();
+});
+
+function attemptLogin() {
+  const val = document.getElementById('pwd-input').value;
+  if (val === ADMIN_PASSWORD) {
+    isAdmin = true;
+    setAdminSession();
+    document.getElementById('login-bg').classList.remove('open');
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('login-err').textContent = '';
+    openAdminPanel();
+  } else {
+    document.getElementById('login-err').textContent = 'incorrect password';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+function showAdminFab() {
+  document.getElementById('fab').classList.remove('hidden');
+}
+
+document.getElementById('logout-btn').onclick = () => {
+  clearAdminSession();
+  isAdmin = false;
+  document.getElementById('admin-panel').classList.remove('open');
+  document.body.style.overflow = '';
+};
+
+/* ---- Admin Panel ---- */
+function openAdminPanel() {
+  showAdminFab();
+  document.getElementById('admin-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderList();
+}
+
+document.getElementById('aclose').onclick = () => {
+  document.getElementById('admin-panel').classList.remove('open');
+  document.body.style.overflow = '';
+};
+
+/* ---- Add New Painting ---- */
+document.getElementById('add-btn').onclick = () => {
+  document.getElementById('new-form').classList.remove('hidden');
+  document.getElementById('edit-form').classList.add('hidden');
+  resetNewForm();
+};
+document.getElementById('n-cancel').onclick = () => {
+  document.getElementById('new-form').classList.add('hidden');
+  newFiles = [];
+};
+
+function resetNewForm() {
+  newFiles = [];
+  document.getElementById('n-title').value = '';
+  document.getElementById('n-desc').value  = '';
+  document.getElementById('n-thumbs').innerHTML = '';
+  document.getElementById('n-msg').innerHTML    = '';
+  document.getElementById('n-progress').style.display = 'none';
+}
+
+setupZone('n-zone', 'n-files', 'n-thumbs', f => { newFiles = f; });
+
+document.getElementById('n-save').onclick = async () => {
+  const title = document.getElementById('n-title').value.trim();
+  const desc  = document.getElementById('n-desc').value.trim();
+  const msgEl = document.getElementById('n-msg');
+
+  if (!newFiles.length) { showMsg(msgEl, 'please upload at least one image', 'err'); return; }
+
+  showMsg(msgEl, 'uploading...', 'loading');
+  showProgress('n', 0, '');
+
+  try {
+    const urls = await uploadFiles(newFiles, 'n');
+    const order = paintings.length;
+    await db.collection('paintings').add({
+      title:     title || 'untitled',
+      description: desc,
+      imageUrls: urls,
+      order,
+      createdAt: Date.now()
+    });
+    showMsg(msgEl, 'saved!', 'ok');
+    newFiles = [];
+    hideProgress('n');
+    setTimeout(() => document.getElementById('new-form').classList.add('hidden'), 600);
+  } catch (err) {
+    console.error(err);
+    showMsg(msgEl, 'upload failed — check Firebase config and try again', 'err');
+    hideProgress('n');
+  }
+};
+
+/* ---- Edit Painting ---- */
+function openEdit(id) {
+  const p = paintings.find(x => x.id === id);
+  if (!p) return;
+  editId = id; editFiles = [];
+
+  document.getElementById('edit-form').classList.remove('hidden');
+  document.getElementById('new-form').classList.add('hidden');
+  document.getElementById('e-title').value = p.title || '';
+  document.getElementById('e-desc').value  = p.description || '';
+  document.getElementById('e-msg').innerHTML = '';
+  hideProgress('e');
+
+  const ex = document.getElementById('e-existing');
+  ex.innerHTML = (p.imageUrls || [])
+    .map(u => `<img class="thumb" src="${u}" alt="">`)
+    .join('');
+
+  document.getElementById('e-thumbs').innerHTML = '';
+  setupZone('e-zone', 'e-files', 'e-thumbs', f => { editFiles = f; });
+  document.getElementById('edit-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.getElementById('e-cancel').onclick = () => {
+  document.getElementById('edit-form').classList.add('hidden');
+  editId = null; editFiles = [];
+};
+
+document.getElementById('e-save').onclick = async () => {
+  if (!editId) return;
+  const title = document.getElementById('e-title').value.trim();
+  const desc  = document.getElementById('e-desc').value.trim();
+  const msgEl = document.getElementById('e-msg');
+
+  showMsg(msgEl, 'saving...', 'loading');
+
+  try {
+    const p = paintings.find(x => x.id === editId);
+    let urls = [...(p.imageUrls || [])];
+
+    if (editFiles.length) {
+      showProgress('e', 0, '');
+      const newUrls = await uploadFiles(editFiles, 'e');
+      urls = [...urls, ...newUrls];
+    }
+
+    await db.collection('paintings').doc(editId).update({
+      title: title || 'untitled',
+      description: desc,
+      imageUrls: urls
+    });
+
+    showMsg(msgEl, 'saved!', 'ok');
+    editFiles = [];
+    hideProgress('e');
+    setTimeout(() => {
+      document.getElementById('edit-form').classList.add('hidden');
+      editId = null;
+    }, 600);
+  } catch (err) {
+    console.error(err);
+    showMsg(msgEl, 'save failed — try again', 'err');
+    hideProgress('e');
+  }
+};
+
+/* ---- Delete Painting ---- */
+async function deletePainting(id) {
+  if (!confirm('delete this painting?')) return;
+  try {
+    await db.collection('paintings').doc(id).delete();
+  } catch (err) {
+    console.error('delete error', err);
+    alert('delete failed — try again');
+  }
+}
+
+/* ---- Render Admin List ---- */
+function renderList() {
+  const list = document.getElementById('p-list');
+  list.innerHTML = '';
+  if (!paintings.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;text-align:center;padding:20px">no paintings yet</div>';
+    return;
+  }
+  paintings.forEach(p => {
+    const n = p.imageUrls?.length || 0;
+    const el = document.createElement('div');
+    el.className = 'p-item';
+    el.innerHTML = `
+      <div>
+        <div class="p-item-name">${esc(p.title || 'untitled')}</div>
+        <div class="p-item-sub">${n} image${n !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="p-item-btns">
+        <button class="btn btn-s" style="font-size:0.72rem;padding:5px 12px" data-edit="${p.id}">edit</button>
+        <button class="btn btn-d" data-del="${p.id}">delete</button>
+      </div>`;
+    el.querySelector('[data-edit]').onclick = () => openEdit(p.id);
+    el.querySelector('[data-del]').onclick  = () => deletePainting(p.id);
+    list.appendChild(el);
+  });
+}
+
+/* ---- Upload Files to Firebase Storage ---- */
+async function uploadFiles(files, prefix) {
+  const urls = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const pct  = Math.round((i / files.length) * 100);
+    showProgress(prefix, pct, `uploading image ${i + 1} of ${files.length}`);
+    const ref  = storage.ref(`paintings/${Date.now()}_${file.name}`);
+    const snap = await ref.put(file);
+    const url  = await snap.ref.getDownloadURL();
+    urls.push(url);
+  }
+  showProgress(prefix, 100, 'done');
+  return urls;
+}
+
+/* ---- Upload Zone Setup ---- */
+function setupZone(zoneId, inputId, thumbsId, onFiles) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  if (!zone || !input) return;
+
+  // Remove old listeners by cloning
+  const newZone = zone.cloneNode(true);
+  zone.parentNode.replaceChild(newZone, zone);
+  const newInput = newZone.querySelector('input[type=file]');
+
+  newZone.onclick = e => { if (e.target !== newInput) newInput.click(); };
+  newInput.onchange = () => {
+    const f = Array.from(newInput.files);
+    onFiles(f);
+    renderThumbs(f, thumbsId);
+  };
+  newZone.ondragover = e => e.preventDefault();
+  newZone.ondrop = e => {
+    e.preventDefault();
+    const f = Array.from(e.dataTransfer.files).filter(x => x.type.startsWith('image/'));
+    onFiles(f);
+    renderThumbs(f, thumbsId);
+  };
+}
+
+function renderThumbs(files, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '';
+  files.forEach(f => {
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = URL.createObjectURL(f);
+    el.appendChild(img);
+  });
+}
+
+/* ---- Progress Helpers ---- */
+function showProgress(prefix, pct, label) {
+  const wrap = document.getElementById(`${prefix}-progress`);
+  const fill = document.getElementById(`${prefix}-progress-fill`);
+  const lbl  = document.getElementById(`${prefix}-progress-label`);
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  fill.style.width   = pct + '%';
+  lbl.textContent    = label;
+}
+function hideProgress(prefix) {
+  const wrap = document.getElementById(`${prefix}-progress`);
+  if (wrap) wrap.style.display = 'none';
+}
+
+/* ---- Status Message Helper ---- */
+function showMsg(el, text, type) {
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+}
+
+/* ---- Start ---- */
+init();
+</script>
+</body>
+</html>
